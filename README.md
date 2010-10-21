@@ -10,7 +10,7 @@ One of the scenarios that people get uncomfortable with is
 the 3000 file limit on GAE, noting that the non-JSP files
 outside the /WEB-INF folder are counted twice on Java apps.
 
-Based on a solution at [GAE Issue 161](http://code.google.com/p/googleappengine/issues/detail?id=161#c88), [UnzipperServlet](src/main/src/com/mastergaurav/gae/server/UnzippperServlet.java) was born.
+Based on a solution at [GAE Issue 161](http://code.google.com/p/googleappengine/issues/detail?id=161#c88), [UnzipperServlet](tree/master/src/main/src/com/mastergaurav/gae/server/UnzippperServlet.java) was born.
 
 Enlisted below are some of its features:
 
