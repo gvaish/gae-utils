@@ -1,5 +1,6 @@
 package com.mastergaurav.gae.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,7 +35,9 @@ public class UnzipperServlet extends HttpServlet
 	private static final Logger LOG = Logger.getLogger(UnzipperServlet.class.getName());
 
 	private static final String KEY_ZIP_FILE = "zipFile";
+	private static final String KEY_WELCOME_FILE_LIST = "welcome-file-list";
 	private String zipFileName;
+	private String welcomeFileList;
 
 	private ZipFile zipFile;
 
@@ -48,9 +51,19 @@ public class UnzipperServlet extends HttpServlet
 		super.init();
 
 		zipFileName = getInitParameter(KEY_ZIP_FILE);
+		LOG.log(Level.WARNING, "Initialization, zipFileName from init = " + zipFileName);
 		if(zipFileName == null || zipFileName.length() == 0)
 		{
 			zipFileName = "/com/mastergaurav/gwt/sc.zip";
+			LOG.log(Level.WARNING, "Initialization, zipFileName was null, hardcoded to: " + zipFileName);
+		}
+
+		welcomeFileList = getInitParameter(KEY_WELCOME_FILE_LIST);
+		LOG.log(Level.WARNING, "Initialization, welcomeFileList = " + welcomeFileList);
+		if(welcomeFileList == null || welcomeFileList.length() == 0)
+		{
+			welcomeFileList = "index.html";
+			LOG.log(Level.WARNING, "Initialization, welcomeFileList was null, hardcoded to: " + welcomeFileList);
 		}
 
 		URL url = UnzipperServlet.class.getResource(zipFileName);
@@ -84,9 +97,17 @@ public class UnzipperServlet extends HttpServlet
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
 		String entryName = req.getPathInfo().substring(1);
+		if(entryName.length() == 0)
+		{
+			entryName = welcomeFileList;
+		}
+
 		LOG.log(Level.WARNING, "Unzipping: " + entryName);
 		ZipEntry entry = zipFile.getEntry(entryName);
 		SimpleDateFormat fmt = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+		fmt.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+		resp.setHeader("X-Aksh-Current-Date", fmt.format(new Date()));
 
 		if(entry == null)
 		{
@@ -95,10 +116,10 @@ public class UnzipperServlet extends HttpServlet
 			return;
 		}
 
+		long entryTime = entry.getTime();
 		if(req.getHeader("If-Modified-Since") != null)
 		{
 			String rawDate = req.getHeader("If-Modified-Since");
-			long entryTime = entry.getTime();
 			LOG.log(Level.WARNING, "Found header if Modified Since: " + rawDate);
 			Date headerDate;
 			try
@@ -118,6 +139,52 @@ public class UnzipperServlet extends HttpServlet
 			}
 		}
 
+		String md5Tag = null;
+
+		String md5File = entryName + ".md5";
+		ZipEntry md5Entry = zipFile.getEntry(md5File);
+		if(md5Entry != null && md5Entry.getSize() >= 32)
+		{
+			InputStream md5Input = zipFile.getInputStream(md5Entry);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			int c;
+			while((c = md5Input.read()) >= 0)
+			{
+				if(c == ' ')
+				{
+					break;
+				}
+				baos.write(c);
+			}
+			md5Input.close();
+			byte[] md5Raw = baos.toByteArray();
+			md5Tag = new String(md5Raw);
+		}
+		LOG.log(Level.WARNING, "MD5 Tag = " + md5Tag);
+
+		String etag = req.getHeader("If-None-Match");
+		LOG.log(Level.WARNING, "If-None-Match Header: " + etag);
+		if(etag != null)
+		{
+			etag = etag.trim();
+			LOG.log(Level.WARNING, "If-None-Match Header (after trim): " + etag);
+			if(etag.charAt(0) == '"')
+			{
+				etag = etag.substring(1, etag.length());
+			}
+			LOG.log(Level.WARNING, "If-None-Match Header (after substring): " + etag);
+			if(etag.equals(md5Tag))
+			{
+				LOG.log(Level.WARNING, "If-None-Match Header MATCHES the md5Tag... will do a 304");
+				resp.setHeader("ETag", md5Tag);
+				resp.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+				return;
+			} else
+			{
+				LOG.log(Level.WARNING, "If-None-Match Header does not match the md5Tag");
+			}
+		}
+
 		LOG.log(Level.WARNING, "Serving the file...");
 		String ctype = filenamemap.getContentTypeFor(entryName);
 		InputStream input = zipFile.getInputStream(entry);
@@ -125,14 +192,19 @@ public class UnzipperServlet extends HttpServlet
 		resp.setContentType(ctype);
 		resp.setHeader("Cache-Control", "public; max-age=" + MAX_AGE);
 
-		fmt.setTimeZone(TimeZone.getTimeZone("GMT"));
-
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.SECOND, MAX_AGE);
 		resp.setHeader("Expires", fmt.format(cal.getTime()));
 
-		OutputStream output = resp.getOutputStream();
+		resp.setHeader("Last-Modified", fmt.format(new Date(entryTime)));
 
+		if(md5Tag != null && md5Tag.length() > 0)
+		{
+			resp.setHeader("ETag", md5Tag);
+		}
+		resp.setHeader("Content-Length", String.valueOf(entry.getSize()));
+
+		OutputStream output = resp.getOutputStream();
 		int i;
 		while((i = input.read()) >= 0)
 		{
@@ -141,4 +213,3 @@ public class UnzipperServlet extends HttpServlet
 		input.close();
 	}
 }
-
