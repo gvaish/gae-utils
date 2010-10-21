@@ -21,6 +21,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * Taks care of "too many files" issue at GAE.
+ * <br/>
+ * Have a look at http://code.google.com/p/googleappengine/issues/detail?id=161#c88
+ * <br/>
+ *   and http://blogs.mastergaurav.com/2010/10/21/google-app-engine-dealing-with-large-number-of-files/
+ */
 @SuppressWarnings("serial")
 public class UnzipperServlet extends HttpServlet
 {
