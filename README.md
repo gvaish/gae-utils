@@ -32,6 +32,14 @@ Usage:
 * Enjoy!
 
 
+DEMO:
+
+* The servlet is in live usage at http://2.latest.mastergaurav.appspot.com
+  Using If-Modified-Since, If-None-Match and ETag headers
+* The servlet is in live usage as http://1.latest.mastergaurav.appspot.com
+  using If-Modified-Since only.
+
+
 TODO:
 
 * Allow custom expiration setting, similar to that in appengine-web.xml using
