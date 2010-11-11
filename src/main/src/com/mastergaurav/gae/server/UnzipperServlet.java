@@ -107,7 +107,7 @@ public class UnzipperServlet extends HttpServlet
 		SimpleDateFormat fmt = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
 		fmt.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-		resp.setHeader("X-Aksh-Current-Date", fmt.format(new Date()));
+		resp.setHeader("X-GVaish-Current-Date", fmt.format(new Date()));
 
 		if(entry == null)
 		{
