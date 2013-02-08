@@ -160,7 +160,7 @@ public class BlobstoreFS
 			r.close();
 		}
 
-		return sb;
+		return sb.toString();
 	}
 }
 
